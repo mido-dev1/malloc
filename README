@@ -1,0 +1,6 @@
+# Simple malloc implementation
+- it works.
+- it uses `sbrk` to perform the allocation.
+- it has a simple free list for managing free blocks.
+- it coalesces adjacent free blocks.
+- it can handle small and large allocations (up to 16MB).
