@@ -13,7 +13,7 @@ SHARED := libmy_malloc.so
 
 all: test
 
-test: $(OBJ)
+test: $(OBJ_TEST)
 	$(CC) $^ -o test
 
 static: $(STATIC)

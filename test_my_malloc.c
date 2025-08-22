@@ -75,6 +75,47 @@ void test_random()
     }
 }
 
+void test_my_realloc()
+{
+    // Case 1: realloc(NULL, size) -> malloc
+    void *p = my_realloc(NULL, 32);
+    assert(p != NULL);
+    memset(p, 0xAA, 32);
+
+    // Case 2: Shrink
+    p = my_realloc(p, 16);
+    assert(p != NULL);
+    for (int i = 0; i < 16; i++)
+    {
+        assert(((unsigned char *)p)[i] == 0xAA); // old data preserved
+    }
+
+    // Case 3: Grow (may or may not move)
+    p = my_realloc(p, 64);
+    assert(p != NULL);
+    for (int i = 0; i < 16; i++)
+    {
+        assert(((unsigned char *)p)[i] == 0xAA); // old data still preserved
+    }
+    memset(p, 0xBB, 64);
+
+    // Case 4: realloc to 0 -> free
+    void *q = my_realloc(p, 0);
+    assert(q == NULL);
+
+    // Case 5: Grow beyond likely inplace (force move test)
+    p = my_malloc(32);
+    assert(p != NULL);
+    memset(p, 0xCC, 32);
+    p = my_realloc(p, 4096); // large grow, probably moves
+    assert(p != NULL);
+    for (int i = 0; i < 32; i++)
+    {
+        assert(((unsigned char *)p)[i] == 0xCC); // data preserved after move
+    }
+    my_free(p);
+}
+
 int main()
 {
     test_basic();
@@ -82,6 +123,7 @@ int main()
     test_various_sizes();
     test_reuse();
     test_random();
+    test_my_realloc();
     printf("All tests passed!\n");
 
     return 0;

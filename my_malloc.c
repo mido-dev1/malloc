@@ -311,9 +311,6 @@ static chunk_t *find_free_chunk(size_t size)
 /* Malloc */
 void *my_malloc(size_t size)
 {
-    if (size == 0)
-        return NULL;
-
     size = round_to_align(size);
 
     if (heap.size == 0)
@@ -344,6 +341,69 @@ void *my_malloc(size_t size)
         next->prev_used = true;
 
     return (void *)c + sizeof(chunk_t);
+}
+
+/* Realloc */
+void *my_realloc(void *ptr, size_t size)
+{
+    if (ptr == NULL)
+        return my_malloc(size);
+
+    if (size == 0)
+    {
+        my_free(ptr);
+        return NULL;
+    }
+
+    chunk_t *chunk = ptr - sizeof(chunk_t);
+    if (!chunk->used)
+        return NULL;
+
+    size = round_to_align(size);
+    size_t old_size = chunk->size;
+
+    // If new size is small, split the chunk.
+    if (size <= old_size)
+    {
+        chunk_t *rest = split(chunk, size);
+        if (!rest)
+            return ptr;
+
+        chunk_t *next = next_chunk(rest);
+        if (next && !next->used)
+        {
+            remove_link(next);
+            merge(rest, next);
+        }
+        prepend_link(rest);
+
+        return ptr;
+    }
+
+    // If the new size is large, and the next chunk is free and big enough, expand the chunk
+    chunk_t *next = next_chunk(chunk);
+    size_t needed_size = size - old_size - sizeof(chunk_t);
+    if (next && !next->used && needed_size <= next->size)
+    {
+        remove_link(next);
+        chunk_t *rest = split(next, needed_size);
+        if (rest)
+            prepend_link(rest);
+
+        merge(chunk, next);
+
+        return ptr;
+    }
+
+    // Else make a new allocation and free the the chunk.
+    chunk_t *new = my_malloc(size);
+    if (!new)
+        return NULL;
+
+    memcpy(new, ptr, old_size);
+    my_free(ptr);
+
+    return new;
 }
 
 /* Free */
